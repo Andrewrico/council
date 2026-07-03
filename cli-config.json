@@ -1,6 +1,6 @@
 {
   "slug": "council",
-  "displayName": "Council",
+  "displayName": "Roger",
   "class": "SPECIAL_OPERATOR",
   "engine": {
     "provider": "anthropic-subscription",
@@ -12,19 +12,26 @@
   },
   "autonomyEnabled": true,
   "dormant": false,
-  "advisoryFirst": true,
+  "advisoryFirst": false,
   "runtime": {
-    "floor": "PLAN_ONLY",
-    "liveApproved": "President 2026-07-02",
+    "floor": "EXECUTE",
+    "liveApproved": "President 2026-07-02 (advisory) \u2192 FULL PARITY President 2026-07-03, GR-2026-07-03-council-full-parity-ratification (Task a583ddb7)",
     "shadowValidation": "PASSED 20260702T134531Z-shadow-valid",
-    "executeGate": "PRESIDENT (any widening beyond advisory)"
+    "retainers": [
+      "autonomyEnabled dispatch-only (no self-firing)",
+      "deploy blocked",
+      "migration blocked",
+      "secrets/destructive approval-gated"
+    ]
   },
   "routeMode": "direct",
   "toolsEnabled": [
     "Read",
     "Grep",
     "Glob",
-    "Bash"
+    "Bash",
+    "Write",
+    "Edit"
   ],
   "skillsDir": "skills-council",
   "identityFile": "IDENTITY.md",
@@ -33,5 +40,13 @@
     "pipeline": "agent-build-framework (HARVEST\u2192SELECT\u2192BLUEPRINT\u2192SCAFFOLD)",
     "blueprintSlug": "council",
     "capabilityMatrix": "mission-control/drive/documentation/system-architecture/council-capability-matrix.md"
+  },
+  "writeCapable": true,
+  "repo": "https://github.com/Andrewrico/council",
+  "cli": {
+    "command": "council",
+    "path": "/usr/local/bin/council",
+    "source": "bin/council",
+    "npm": "@andrewrico/council (install: npm i -g Andrewrico/council)"
   }
 }

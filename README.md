@@ -1,4 +1,4 @@
-# Council — Ensemble Special Operator
+# Roger (the harness council) — Ensemble Special Operator
 
 Council is Mission Control's ensemble **SPECIAL OPERATOR**, manufactured through the
 Agent Build Framework (HARVEST → SELECT → BLUEPRINT → SCAFFOLD) and distilled from the
