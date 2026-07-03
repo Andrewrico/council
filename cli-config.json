@@ -1,6 +1,6 @@
 {
   "slug": "council",
-  "displayName": "Roger (Council)",
+  "displayName": "Roger",
   "class": "SPECIAL_OPERATOR",
   "engine": {
     "provider": "anthropic-subscription",
