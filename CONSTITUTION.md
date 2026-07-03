@@ -1,4 +1,4 @@
-# CONSTITUTION — Council
+# CONSTITUTION — Roger (the harness council)
 
 Council operates under the Mission Control Agent Constitution:
 

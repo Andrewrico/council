@@ -1,6 +1,6 @@
 {
   "slug": "council",
-  "displayName": "Roger",
+  "displayName": "Roger (Council)",
   "class": "SPECIAL_OPERATOR",
   "engine": {
     "provider": "anthropic-subscription",
@@ -48,5 +48,6 @@
     "path": "/usr/local/bin/council",
     "source": "bin/council",
     "npm": "@andrewrico/council (install: npm i -g Andrewrico/council)"
-  }
+  },
+  "alias": "Roger"
 }
