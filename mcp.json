@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "operators-mcp": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/root/mission-control/drive/mcp-servers/operators-mcp",
+        "run",
+        "operators-mcp"
+      ]
+    }
+  },
+  "_note": "Council's only MCP dependency is operators-mcp (list_agents / agent_info / dispatch_task / get_run_log / council) — it advises on and routes to the fleet; it does not carry its own execution servers while DORMANT. Wiring mirrors the canonical client config."
+}

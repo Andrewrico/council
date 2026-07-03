@@ -1,0 +1,37 @@
+{
+  "slug": "council",
+  "displayName": "Council",
+  "class": "SPECIAL_OPERATOR",
+  "engine": {
+    "provider": "anthropic-subscription",
+    "cli": "claude",
+    "model": "claude-sonnet-4-6",
+    "envUnset": [
+      "ANTHROPIC_API_KEY"
+    ]
+  },
+  "autonomyEnabled": true,
+  "dormant": false,
+  "advisoryFirst": true,
+  "runtime": {
+    "floor": "PLAN_ONLY",
+    "liveApproved": "President 2026-07-02",
+    "shadowValidation": "PASSED 20260702T134531Z-shadow-valid",
+    "executeGate": "PRESIDENT (any widening beyond advisory)"
+  },
+  "routeMode": "direct",
+  "toolsEnabled": [
+    "Read",
+    "Grep",
+    "Glob",
+    "Bash"
+  ],
+  "skillsDir": "skills-council",
+  "identityFile": "IDENTITY.md",
+  "constitutionFile": "CONSTITUTION.md",
+  "provenance": {
+    "pipeline": "agent-build-framework (HARVEST\u2192SELECT\u2192BLUEPRINT\u2192SCAFFOLD)",
+    "blueprintSlug": "council",
+    "capabilityMatrix": "mission-control/drive/documentation/system-architecture/council-capability-matrix.md"
+  }
+}

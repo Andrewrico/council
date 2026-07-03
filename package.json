@@ -1,0 +1,31 @@
+{
+  "name": "@andrewrico/council",
+  "version": "1.0.0",
+  "description": "Council — Mission Control's ensemble special operator. CLI dispatcher distilled from the verified best capability of the 9 Mission Control operators.",
+  "bin": {
+    "council": "bin/council"
+  },
+  "files": [
+    "bin/",
+    "IDENTITY.md",
+    "CONSTITUTION.md",
+    "cli-config.json",
+    "mcp.json",
+    "skills-council/",
+    "README.md"
+  ],
+  "os": [
+    "linux",
+    "darwin"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Andrewrico/council.git"
+  },
+  "author": "Andrew Rico",
+  "license": "UNLICENSED",
+  "private": false,
+  "engines": {
+    "node": ">=18"
+  }
+}

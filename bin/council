@@ -1,0 +1,195 @@
+#!/usr/bin/env bash
+# council — Council ensemble operator dispatcher.
+#
+# Dispatches a task to Council, Mission Control's ensemble SPECIAL OPERATOR
+# (distilled from the verified best capability of the 9 operators), through the
+# official MAIS handoff protocol. Mirrors `orchestrate`/`govern`: frames the
+# task, injects the Protocol Preamble + Council's operator identity, logs a
+# traceable handoff on the MAIS bus, executes on the Council engine
+# (`claude -p`, model pinned to claude-sonnet-4-6, subscription auth), and
+# relays the result.
+#
+# Full-parity operator (President-approved Task a583ddb7): write-capable,
+# EXECUTE floor. deploy+migration classes remain blocked — route those through
+# the Orchestrator's migration-first + boot-verify protocol.
+#
+# Usage:
+#   council "Cross-check this plan and execute the safe parts"
+#   council --advisory "Which operator should take this task?"
+#   council --file task.md
+#   echo "long task…" | council
+#
+# Flags:
+#   -m, --model NAME   Model override (default: claude-sonnet-4-6 — always pinned)
+#   -f, --file PATH    Read the task from a file
+#       --advisory     Read-only toolset (Read/Grep/Glob) — classic Council poll
+#       --no-exec      Log the MAIS handoff only, don't run the engine
+#       --no-mais      Skip the MAIS bus log (discouraged)
+#   -h, --help         Show this help
+#
+# Exit code = engine exit code. Run logs: /root/.council/runs/.
+
+set -euo pipefail
+
+# shellcheck source=/usr/local/lib/mc-protocol-dispatch.sh
+. /usr/local/lib/mc-protocol-dispatch.sh
+
+MODEL="claude-sonnet-4-6"   # registry default_model is NOT auto-applied — pin it (memory: agent-build-framework)
+TASK_FILE=""
+NO_EXEC=0
+NO_MAIS=0
+ADVISORY=0
+RUNDIR="/root/.council/runs"
+AGENTIC="/root/agentic.sh"
+COUNCIL_ID="council"        # Council's id on the MAIS bus
+
+usage() { sed -n '2,31p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+
+ARGS=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -m|--model)  MODEL="$2"; shift 2 ;;
+    -f|--file)   TASK_FILE="$2"; shift 2 ;;
+    --advisory)  ADVISORY=1; shift ;;
+    --no-exec)   NO_EXEC=1; shift ;;
+    --no-mais)   NO_MAIS=1; shift ;;
+    -h|--help)   usage 0 ;;
+    --)          shift; ARGS+=("$@"); break ;;
+    *)           ARGS+=("$1"); shift ;;
+  esac
+done
+
+if [ -n "$TASK_FILE" ]; then
+  RAW_TASK="$(cat "$TASK_FILE")"
+elif [ "${#ARGS[@]}" -gt 0 ]; then
+  RAW_TASK="${ARGS[*]}"
+elif [ ! -t 0 ]; then
+  RAW_TASK="$(cat)"
+else
+  echo "council: no task given." >&2; usage 1
+fi
+
+[ -n "${RAW_TASK// /}" ] || { echo "council: empty task." >&2; exit 1; }
+command -v claude >/dev/null 2>&1 || { echo "council: claude CLI not found" >&2; exit 127; }
+
+WORKSPACE="${COUNCIL_WORKSPACE:-/root/mission-control}"
+MC_PROTOCOL_RAW_TASK="$RAW_TASK"
+
+# --- Protocol Preamble (mandatory floor) + operator identity (best-effort) ---
+OPERATOR_SLUG="council"
+
+if [ -z "${WORKER_SECRET:-}" ]; then
+  for ENVF in "$WORKSPACE/.env" "/root/mission-control/.env"; do
+    if [ -f "$ENVF" ] && grep -q '^WORKER_SECRET=' "$ENVF"; then
+      WORKER_SECRET="$(grep '^WORKER_SECRET=' "$ENVF" | head -1 | cut -d= -f2- | tr -d '\042\047')"
+      export WORKER_SECRET
+      break
+    fi
+  done
+fi
+
+API="${MC_API_URL:-http://localhost:3005}"
+SECRET="${WORKER_SECRET:-}"
+
+PROTOCOL_PREAMBLE=""
+if ! PROTOCOL_PREAMBLE="$(mc_load_protocol_preamble)"; then
+  mc_protocol_block_and_exit "council" "Protocol Preamble file missing or unreadable: $PROTOCOL_PREAMBLE_FILE" "$API" "$SECRET"
+fi
+
+IDENTITY_PREAMBLE=""
+INJECTED_PROTOCOL="yes"
+INJECTED_IDENTITY="degraded (endpoint unreachable)"
+if RESP="$(curl -fsS --max-time 5 -H "Authorization: Bearer $SECRET" \
+            "$API/api/operator/dispatch-preamble?slug=$OPERATOR_SLUG" 2>/dev/null)"; then
+  IDENTITY_PREAMBLE="$(printf '%s' "$RESP" | jq -r '.preamble // ""')"
+  if [ -n "$IDENTITY_PREAMBLE" ]; then
+    INJECTED_IDENTITY="yes"
+  else
+    INJECTED_IDENTITY="no (empty profile)"
+  fi
+fi
+
+# Fall back to the local identity file so Council never runs identity-less.
+if [ "$INJECTED_IDENTITY" != "yes" ] && [ -f /root/.council/VAC_IDENTITY.md ]; then
+  IDENTITY_PREAMBLE="$(cat /root/.council/VAC_IDENTITY.md)"
+  INJECTED_IDENTITY="local (VAC_IDENTITY.md)"
+fi
+
+TASK="$(mc_build_injected_task "$PROTOCOL_PREAMBLE" "$IDENTITY_PREAMBLE" "$RAW_TASK")"
+
+TS="$(date -u +%Y%m%dT%H%M%SZ)"
+SLUG="$(printf '%s' "$RAW_TASK" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | cut -c1-40 | sed 's/-*$//')"
+TASK_SUMMARY="$(printf '%s' "$RAW_TASK" | tr -s '[:space:]' ' ' | cut -c1-140)"
+mkdir -p "$RUNDIR"
+LOG="$RUNDIR/${TS}-${SLUG:-task}.log"
+
+if [ "$ADVISORY" -eq 1 ]; then
+  TOOLS="Read Grep Glob"
+  PERM_ARGS=()
+else
+  TOOLS="Read Grep Glob Bash Write Edit"
+  PERM_ARGS=(--permission-mode acceptEdits)
+fi
+
+{
+  echo "# Council dispatch run"
+  echo "When:     $TS"
+  echo "Executor: council (Ensemble Special Operator)"
+  echo "Model:    $MODEL"
+  echo "Mode:     $([ "$ADVISORY" -eq 1 ] && echo advisory || echo execute)"
+  echo "Injected-protocol: $INJECTED_PROTOCOL"
+  echo "Injected-identity: $INJECTED_IDENTITY"
+  echo "Task:"
+  printf '%s\n' "$TASK_SUMMARY" | sed 's/^/  /'
+} | tee "$LOG"
+
+# 1) Traceable MAIS handoff (OR-16). Work not on the bus did not officially happen.
+if [ "$NO_MAIS" -eq 0 ]; then
+  HANDOFF_MSG="[council] from=claude to=${COUNCIL_ID} run=${TS} log=${LOG} task=${TASK_SUMMARY}"
+  if ! mc_protocol_mais_handoff "$COUNCIL_ID" "$HANDOFF_MSG" "$LOG"; then
+    mc_protocol_block_and_exit "council" "MAIS handoff failed (target=${COUNCIL_ID})" "$API" "$SECRET"
+  fi
+  HANDOFF_ID="$MC_LAST_HANDOFF_ID"
+  echo "----- MAIS handoff logged → ${COUNCIL_ID} (${HANDOFF_ID:-?}) -----" | tee -a "$LOG"
+fi
+
+# 2) Execute on the Council engine (claude -p, subscription auth — never the API key).
+RC=0
+if [ "$NO_EXEC" -eq 0 ]; then
+  echo "----- council output -----" | tee -a "$LOG"
+  set +e
+  ( cd "$WORKSPACE" && env -u ANTHROPIC_API_KEY claude -p "$TASK" \
+      --model "$MODEL" --allowedTools "$TOOLS" "${PERM_ARGS[@]}" ) 2>&1 | tee -a "$LOG"
+  RC=${PIPESTATUS[0]}
+  set -e
+  echo "----- exit: $RC -----" | tee -a "$LOG"
+else
+  echo "----- --no-exec: handoff logged, engine not run -----" | tee -a "$LOG"
+fi
+
+# 2b) Close the handoff we opened (delegator owns the lifecycle).
+if [ "$NO_MAIS" -eq 0 ] && [ "$NO_EXEC" -eq 0 ] && [ -n "${HANDOFF_ID:-}" ]; then
+  if [ "$RC" -eq 0 ]; then
+    mc_protocol_mais_resolve "$HANDOFF_ID" "Executed synchronously by council CLI RC=0; run=$LOG" "$LOG"
+    echo "----- MAIS handoff ${HANDOFF_ID} resolved (completed) -----" | tee -a "$LOG"
+  else
+    REASON_CLASS="executor-error"
+    NEXT_ACTION="Review council run log; fix failure and re-dispatch if needed"
+    FAIL_NOTE="Executed synchronously by council CLI RC=${RC}; run=${LOG}; next=${NEXT_ACTION}"
+    mc_protocol_mais_blocked "council" "$REASON_CLASS" "$RC" "$LOG" "$NEXT_ACTION"
+    if mc_protocol_mais_fail "$HANDOFF_ID" "$REASON_CLASS" "$FAIL_NOTE" "$LOG"; then
+      echo "----- MAIS handoff ${HANDOFF_ID} failed (terminal, ${REASON_CLASS}, RC=$RC) -----" | tee -a "$LOG"
+    else
+      echo "----- MAIS handoff ${HANDOFF_ID} terminal-fail write FAILED — escalating -----" | tee -a "$LOG"
+      mc_protocol_mais_fail_escalate "$HANDOFF_ID" "$REASON_CLASS" "$FAIL_NOTE" "$LOG"
+    fi
+  fi
+fi
+
+# 3) Canonical work log (best-effort).
+if [ -x "$AGENTIC" ]; then
+  "$AGENTIC" log "council [$RC] ${SLUG:-task} log=$LOG" >/dev/null 2>&1 || true
+fi
+
+echo "council: run logged to $LOG" >&2
+exit "$RC"
