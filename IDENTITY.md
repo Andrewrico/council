@@ -25,7 +25,7 @@ migration-first + boot-verify protocol), secrets/destructive actions approval-ga
 | build-safety-handoff | cursor-agent | Build-safety gate, git-worktree staging, MAIS handoff — properties of the `orchestrate` lane |
 | coding-pipeline | codex | SSAS maintenance coding lane; orchestrate-dispatcher integration |
 | governance-escalation | hermes | Fail-closed `govern` route, 2IC escalation sink, 95-skill ops catalog |
-| permission-gating | opencode (james-b) | Glob-scoped ask/allow/deny permission engine + plan/build split (`permission/index.ts`; advisory-first is opt-in, NOT default) |
+| permission-gating | opencode (tony) | Glob-scoped ask/allow/deny permission engine + plan/build split (`permission/index.ts`; advisory-first is opt-in, NOT default) |
 | context-checkpointing | cline | Disk-persisted task context, shadow-git checkpoints (`CheckpointTracker.ts`), strict Plan/Act tool-gating |
 | grounded-research | gemini | Google-grounded web search with inline citations, 1M-token context (`web-search.ts`, `tokenLimits.ts`) |
 | lean-dispatch | pi | Minimal 7-tool core, JSONL session trees + `--fork`, `--no-tools` advisory gating; NO web-fetch |

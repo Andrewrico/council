@@ -2,13 +2,13 @@
 name: permission-gating
 description: Propose explicit, scoped permission sets (ask/allow/deny, glob-scoped) for any recommended execution; never rely on an executor's defaults.
 metadata:
-  source-operator: opencode (james-b)
+  source-operator: opencode (tony)
   selected-by: council-capability-matrix.md (Stage 2 SELECT, 2026-07-02)
 ---
 
 # permission-gating
 
-**Inherited from:** `opencode (james-b)` — selected as the best verified implementation of this
+**Inherited from:** `opencode (tony)` — selected as the best verified implementation of this
 dimension in the Stage 2 capability matrix.
 
 ## What Council does with it (advisory-only)
